@@ -1,0 +1,144 @@
+image: node:18.16.1
+options:
+  size: 2x
+clone:
+  lfs: true
+  depth: 2
+
+install-aws-cli: &install-aws-cli |-
+  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+  unzip awscliv2.zip && ./aws/install
+  aws --version
+  yarn global add serverless aws-cdk
+
+s3-pull-config: &s3-pull-config |-
+  aws s3api create-bucket --bucket $BUCKET_NAME
+  aws s3 cp s3://$BUCKET_NAME/config.env config.env || true # skip error if file doesn't exist
+  aws s3 cp s3://$BUCKET_NAME/.migrate packages/migrations/.migrate || true # skip error if file doesn't exist
+  aws s3 sync s3://$BUCKET_NAME/web/.serverless apps/web/.serverless --delete # TODO: Remove after sst migration
+  aws s3 cp s3://$BUCKET_NAME/web/cdk.context.json apps/web/cdk.context.json || true # skip error if file doesn't exist
+
+s3-push-config: &s3-push-config |-
+  aws s3 cp config.env s3://$BUCKET_NAME/config.env
+  aws s3 cp packages/migrations/.migrate s3://$BUCKET_NAME/.migrate || true # skip error if file doesn't exist
+  aws s3 sync apps/web/.serverless s3://$BUCKET_NAME/web/.serverless --delete # TODO: Remove after sst migration
+  aws s3 cp s3://$BUCKET_NAME/web/cdk.context.json apps/web/cdk.context.json || true # skip error if file doesn't exist
+
+s3-pull-turbo-cache: &s3-pull-turbo-cache |-
+  # aws s3 rm s3://$BUCKET_NAME/node_modules --recursive || true
+  aws s3 sync s3://$BUCKET_NAME/node_modules/.cache/turbo node_modules/.cache/turbo --delete
+
+s3-push-turbo-cache: &s3-push-turbo-cache |-
+  aws s3 sync node_modules/.cache/turbo s3://$BUCKET_NAME/node_modules/.cache/turbo --delete
+
+install-git-lfs: &install-git-lfs |-
+  curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+  apt-get install -y git-lfs
+  git lfs install
+
+pipelines:
+  pull-requests:
+    '*/*':
+      - step:
+          name: Test Pull Request
+          size: 2x
+          services:
+            - docker-3g
+          caches:
+            - node
+            - docker
+            - jest
+          deployment: Pull Request
+          script:
+            - BUCKET_NAME=pipeline-pullrequest
+            - *install-aws-cli
+            - *s3-pull-config
+            - touch config.env
+            - yarn install --frozen-lockfile
+            - cat config.env
+            - *s3-pull-turbo-cache
+            - yarn build --filter=!./apps/web ${EXTRA_COMMANDS} --concurrency=1
+            - yarn deploy --filter=!./apps/web ${EXTRA_COMMANDS} ${DEPLOY_ARGS} --concurrency=1
+            - yarn workspace search delete-indices && yarn workspace search rebuild-indices
+            - *s3-push-turbo-cache
+            - yarn test ${EXTRA_COMMANDS} ${TEST_ARGS} --concurrency=1
+            - *s3-push-turbo-cache
+            - rm -rf ./node_modules/.cache/turbo
+
+  branches:
+    master:
+      - step:
+          name: Test deploy merge
+          size: 2x
+          services:
+            - docker
+          caches:
+            - node
+            - docker
+            - jest
+          deployment: Staging
+          script:
+            - BUCKET_NAME=mapstack-pipeline-staging
+            - if [ -n "$RELEASE_TAG" ]; then git checkout tags/$RELEASE_TAG ; fi
+            - *install-aws-cli
+            - *s3-pull-config
+            - touch config.env
+            - yarn install --frozen-lockfile
+            - cat config.env
+            - *s3-pull-turbo-cache
+            - yarn build ${EXTRA_COMMANDS} --concurrency=1
+            - yarn deploy  ${EXTRA_COMMANDS} ${DEPLOY_ARGS} --concurrency=1
+            - *s3-push-config
+            - *s3-push-turbo-cache
+            - yarn test ${EXTRA_COMMANDS} ${TEST_ARGS} --concurrency=1
+            - *s3-push-turbo-cache
+            - *install-git-lfs
+            - yarn workspace search delete-indices && yarn workspace search rebuild-indices
+            - git remote set-url origin ${BITBUCKET_GIT_SSH_ORIGIN}
+            - echo $BITBUCKET_GIT_SSH_ORIGIN
+            - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+            - git remote update
+            - git fetch --all
+            - yarn add @semantic-release/changelog -W
+            - yarn add @semantic-release/git -W
+            - npx semantic-release@17 --no-ci -b master
+            - rm -rf ./node_modules/.cache/turbo
+
+  custom:
+    productionDeployment:
+      - step:
+          name: Deploy to Production
+          size: 2x
+          services:
+            - docker
+          caches:
+            - node
+            - docker
+          deployment: Production
+          script:
+            - BUCKET_NAME=mapstack-pipeline-production
+            - if [ -z "$RELEASE_TAG" ]; then exit 1 ; fi
+            - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+            - *install-git-lfs
+            - git checkout tags/$RELEASE_TAG
+            - *install-aws-cli
+            - *s3-pull-config
+            - touch config.env
+            - yarn install --frozen-lockfile
+            - *s3-pull-turbo-cache
+            - yarn build --concurrency=1 ${EXTRA_COMMANDS}
+            - yarn deploy --concurrency=1 ${EXTRA_COMMANDS} ${DEPLOY_ARGS}
+            - *s3-push-config
+            - *s3-push-turbo-cache
+            - rm -rf ./node_modules/.cache/turbo
+
+definitions:
+  services:
+    docker:
+      memory: 2048
+    docker-3g:
+      type: docker
+      memory: 3072
+  caches:
+    jest: ./.jest-cache
+    yarn: ./.yarn

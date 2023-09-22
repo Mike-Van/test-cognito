@@ -1,0 +1,79 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "pipeline": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "web#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "REGION",
+        "NEXT_*",
+        "USER_POOL_*",
+        "DOMAIN_NAME",
+        "GRAPHQL_*",
+        "GA_MEASUREMENT_ID",
+        "NODE_ENV",
+        "REACT_APP_MAP_DATA_URL",
+        "MAP_DATA_S3_BUCKET",
+        "UUID",
+        "ASSETS_UPLOAD_CLOUDFRONT_URL",
+        "ENABLE_REDUX_DEV_TOOLS",
+        "SENTRY_*",
+        "WARM_*"
+      ]
+    },
+    "deploy": {
+      "dependsOn": ["^build"]
+    },
+    "web#deploy": {
+      "dependsOn": [
+        "^build",
+        "vt-server#deploy",
+        "graphql-api#deploy",
+        "search#deploy"
+      ]
+    },
+    "vt-server#deploy": {
+      "dependsOn": ["map-data-write#deploy"]
+    },
+    "migrations#deploy": {
+      "dependsOn": ["graphql-api#deploy"],
+      "outputs": ["./.migrate"]
+    },
+    "ses-setup-domain-setup#deploy": {
+      "dependsOn": ["ses-setup-bucket-create#deploy"]
+    },
+    "graphql-api#deploy": {
+      "dependsOn": [
+        "csv-augmentation#deploy",
+        "map-data-write#deploy",
+        "assets-upload#deploy",
+        "ses-setup-bucket-create#deploy",
+        "ses-setup-domain-setup#deploy",
+        "search#deploy"
+      ]
+    },
+    "destroy": {
+      "outputs": []
+    },
+    "test": {
+      "cache": true
+    },
+    "lint": {
+      "outputs": []
+    },
+    "dev": {
+      "cache": false
+    },
+    "example": {
+      "cache": false
+    },
+    "storybook": {
+      "dependsOn": ["^build"],
+      "cache": false
+    }
+  }
+}

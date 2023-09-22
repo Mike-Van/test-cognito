@@ -1,0 +1,21 @@
+runs:
+  using: "composite"
+  steps:
+    - name: Create AWS S3 Bucket
+      shell: bash
+      run: aws s3api create-bucket --bucket $BUCKET_NAME
+
+    - name: copy config.env
+      shell: bash
+      continue-on-error: true
+      run: aws s3 cp s3://$BUCKET_NAME/config.env config.env
+
+    - name: copy cdk.context.json
+      shell: bash
+      continue-on-error: true
+      run: aws s3 cp s3://$BUCKET_NAME/web/cdk.context.json apps/web/cdk.context.json
+
+    - name: Pull S3 configuration
+      shell: bash
+      run: |
+        aws s3 sync s3://$BUCKET_NAME/node_modules/.cache/turbo node_modules/.cache/turbo --delete

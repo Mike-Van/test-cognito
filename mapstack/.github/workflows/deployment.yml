@@ -1,0 +1,186 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.event_name }}
+
+env:
+  BUCKET_NAME: ${{ vars.BUCKET_NAME }} # s3 bucket for artifacts
+  RELEASE_TAG: ${{ vars.RELEASE_TAG }}
+  BUILD_EXTRA: ${{ vars.BUILD_EXTRA }} # pass in extra commands
+  DEPLOY_EXTRA: ${{ vars.DEPLOY_EXTRA }} # pass in extra commands
+  TEST_EXTRA: ${{ vars.TEST_EXTRA }} # pass in extra commands
+  AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+  DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
+  EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+  ENABLE_BACKUP: ${{ vars.ENABLE_BACKUP }}
+  ENABLE_LIFECYCLE_RULE: ${{ vars.ENABLE_LIFECYCLE_RULE }}
+  ENABLE_VERSIONING: ${{ vars.ENABLE_VERSIONING }}
+  GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+  GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+  LAMBDA_SENTRY_DSN: ${{ vars.LAMBDA_SENTRY_DSN }}
+  NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID }}
+  NEXT_PUBLIC_SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+  SEARCH_INSTANCE_TYPE: ${{ vars.SEARCH_INSTANCE_TYPE }}
+  SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+  UUID: ${{ vars.UUID }}
+  SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  WARM_WEB: ${{ vars.WARM_WEB }} # Keep Next server warm all the time
+  WARM_WEB_COUNT: ${{ vars.WARM_WEB_COUNT }} # Number of Next servers to keep warm
+  WARM_LAMBDA: ${{ vars.WARM_LAMBDA }} # Keep Lambda function warm all the time
+
+jobs:
+  get_environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.test.outputs.environment }}
+    steps:
+      - id: set-options
+        run: echo "options={\"pull_request\":\"Testing\", \"push\":\"Staging\", \"workflow_dispatch\":\"Production\"}" >> $GITHUB_OUTPUT
+      - id: event
+        run: echo "Event name - ${{ github.event_name }}"
+      - id: test
+        run: echo "environment=${{ fromJSON(steps.set-options.outputs.options)[github.event_name] }}" >> $GITHUB_OUTPUT
+
+  run_deployment:
+    needs: get_environment
+    runs-on: big-runner-8
+    environment:
+      name: ${{ needs.get_environment.outputs.environment }}
+    steps:
+      # Github environment
+      - run: |
+          echo "Github actions environment: ${{ needs.get_environment.outputs.environment }}"
+
+      # Checkout the code
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+          fetch-tags: true
+
+      # Install Node
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      # Cache yarn dependencies
+      - uses: actions/cache@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ needs.get_environment.outputs.environment }}-${{ runner.os }}-modules-${{ hashFiles('yarn.lock') }}
+
+      # Cache Jest Jsdom
+      - uses: actions/cache@v3
+        with:
+          path: '**/.jest-cache'
+          key: ${{ runner.os }}-jest-cache-${{ hashFiles('yarn.lock') }}
+
+      # Production deployment requires a release tag to be provided
+      - name: check-production-release-tag
+        if: ${{ needs.get_environment.outputs.environment == 'Production' && ! vars.RELEASE_TAG  }}
+        run: exit 1
+
+      # Update the version if required
+      - name: checkout-tag
+        if: ${{ vars.RELEASE_TAG }}
+        run: git checkout tags/${{ vars.RELEASE_TAG }}
+
+      # Install AWS CLI
+      - id: install-aws-cli
+        uses: unfor19/install-aws-cli-action@v1
+
+      # Fetch artifacts
+      - run: aws s3api create-bucket --bucket $BUCKET_NAME
+      - run: aws s3 cp s3://$BUCKET_NAME/config.env config.env || true # skip error if file doesn't exist
+      - run: aws s3 cp s3://$BUCKET_NAME/.migrate packages/migrations/.migrate || true # skip error if file doesn't exist
+      - run: aws s3 cp s3://$BUCKET_NAME/web/cdk.context.json apps/web/cdk.context.json || true # skip error if file doesn't exist
+      - run: aws s3 sync s3://$BUCKET_NAME/node_modules/.cache/turbo node_modules/.cache/turbo --delete
+
+      # Create config if this script is being run for the first time
+      - run: touch config.env
+
+      # Install yarn
+      - run: yarn install --prefer-offline --frozen-lockfile
+
+      # Setup filter to not run web deployment for testing (it's very slow)
+      - name: set-turbo-filters
+        if: ${{ needs.get_environment.outputs.environment == 'Testing' }}
+        run: echo "TURBO_FILTER=--filter=!./apps/web" >> $GITHUB_ENV
+
+      # Build
+      - run: yarn build $BUILD_EXTRA $TURBO_FILTER
+
+      # Set test arguments for ui testing
+      - run: echo "TEST_EXTRA=--filter=./packages/** --concurrency=4" >> $GITHUB_ENV
+
+      # Testing Frontend
+      - name: run-tests
+        if: ${{ needs.get_environment.outputs.environment != 'Production' }}
+        run: yarn test $TEST_EXTRA
+
+      # Run Deployment
+      - run: yarn deploy $DEPLOY_EXTRA $TURBO_FILTER
+
+      # Cache build and deploy to Turbo
+      - run: aws s3 sync node_modules/.cache/turbo s3://$BUCKET_NAME/node_modules/.cache/turbo --delete
+      - run: aws s3 cp config.env s3://$BUCKET_NAME/config.env
+      - run: aws s3 cp packages/migrations/.migrate s3://$BUCKET_NAME/.migrate || true # skip error if file doesn't exist
+      - run: aws s3 cp s3://$BUCKET_NAME/web/cdk.context.json apps/web/cdk.context.json || true # skip error if file doesn't exist
+
+      # Update search indexes
+      - run: yarn workspace search delete-indices && yarn workspace search rebuild-indices
+
+      # Set test arguments for api testing
+      - run: echo "TEST_EXTRA=--filter=!./packages/** --concurrency=1" >> $GITHUB_ENV
+
+      # Api Service Tests (We don't want to test production in case of side effects)
+      - name: run-api-tests
+        if: ${{ needs.get_environment.outputs.environment != 'Production'  }}
+        run: yarn test $TEST_EXTRA
+
+      # Upload turbo cache
+      - run: aws s3 sync node_modules/.cache/turbo s3://$BUCKET_NAME/node_modules/.cache/turbo --delete
+
+      # Cleanup
+      - run: rm -rf ./node_modules/.cache/turbo
+
+  # Tag the release using semantic versioning
+  semantic_release:
+    if: ${{ needs.get_environment.outputs.environment == 'Staging' }}
+    needs: run_deployment
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.get_environment.outputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          lfs: true
+
+      # Stop semantic errors around an old LFS yarn.lock file
+      - run: git config lfs.allowincompletepush true
+
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          # You can specify specifying version range for the extra plugins if you prefer.
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+        env:
+          # See: https://github.com/marketplace/actions/action-for-semantic-release
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}

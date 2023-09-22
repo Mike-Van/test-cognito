@@ -1,0 +1,8 @@
+confirmUserSignup:
+  handler: src/user/functions/confirm-user-signup/index.handler
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - cognito-idp:AdminUpdateUserAttributes
+        - cognito-idp:AdminDeleteUser
+      Resource: '*'

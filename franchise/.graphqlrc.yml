@@ -1,0 +1,3 @@
+schema: 'apps/graphql-api/schema.graphql'
+documents: ['packages/**/*.{graphql,js,ts,jsx,tsx}']
+exclude: '**/__generated'

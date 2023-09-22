@@ -1,0 +1,85 @@
+module.exports = {
+	env: {
+		browser: true,
+		es2022: true,
+		node: true,
+		jest: true,
+	},
+	settings: {
+		react: {
+			version: '18.2.0',
+		},
+		next: {
+			rootDir: 'apps/web',
+		},
+	},
+	extends: [
+		'eslint:recommended',
+		'plugin:@typescript-eslint/recommended',
+		'prettier',
+		'plugin:react/recommended',
+		'plugin:react/jsx-runtime',
+		'plugin:react-hooks/recommended',
+		'plugin:@next/next/recommended',
+		'plugin:storybook/recommended',
+	],
+	parser: '@typescript-eslint/parser',
+	parserOptions: {
+		ecmaVersion: 'latest',
+		sourceType: 'module',
+	},
+	ignorePatterns: [
+		'**/.git',
+		'**/.svn',
+		'**/.hg',
+		'**/node_modules',
+		'**/.turbo',
+		'**/.next',
+		'**/public',
+		'**/dist',
+		'**/.sst',
+		'**/.open-next',
+		'**/out',
+		'**/__dist',
+		'**/.firebase',
+		'**/.eslintcache',
+		'**/sst.config.ts',
+		'**/types/gql/*',
+		'packages/website/**',
+		'**/__*',
+	],
+	plugins: ['@typescript-eslint', 'jest', 'import'],
+	rules: {
+		'@typescript-eslint/no-unused-vars': [
+			'error',
+			{ argsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_', varsIgnorePattern: '^_' },
+		],
+		'import/order': [
+			'error',
+			{
+				'newlines-between': 'always',
+				pathGroups: [
+					{
+						pattern: '~/**',
+						group: 'parent',
+					},
+					{
+						pattern: '@franchise/**',
+						group: 'internal',
+					},
+				],
+				pathGroupsExcludedImportTypes: [],
+				groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index', 'object', 'type'],
+			},
+		],
+		indent: ['off', 'tab'],
+		'linebreak-style': ['error', 'unix'],
+		semi: ['error', 'always'],
+		'@typescript-eslint/no-explicit-any': 'off',
+		'@typescript-eslint/no-non-null-assertion': 'error',
+		'@next/next/no-img-element': 'off',
+		'react/react-in-jsx-scope': 'off',
+		'react/prop-types': 'off',
+		'react/no-unknown-property': [2, { ignore: ['jsx', 'global'] }],
+	},
+};

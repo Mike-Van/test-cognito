@@ -1,0 +1,67 @@
+service: test-mapstack-graphql-api
+frameworkVersion: '3'
+
+plugins:
+  - serverless-iam-roles-per-function
+  - serverless-export-env
+  - serverless-plugin-monorepo
+  - serverless-stack-output
+  - serverless-prune-plugin
+  - serverless-plugin-warmup
+  - serverless-esbuild
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  timeout: 60
+  tracing:
+    lambda: true
+    apiGateway: false
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    SENTRY_DSN: ${env:LAMBDA_SENTRY_DSN}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - xray:PutTraceSegments
+            - xray:PutTelemetryRecords
+          Resource: '*'
+
+package:
+  individually: true
+  patterns:
+    - '!test/**'
+    - '!**/spec.js'
+    - '!node_modules/**/README.*'
+    - '!node_modules/**/test/**'
+
+custom:
+  region: ${opt:region, aws:region}
+  stage: ${opt:stage, sls:stage}
+
+  output:
+    file: .serverless/stack.json
+
+  prune:
+    automatic: true
+    number: 10
+
+  # https://www.serverless.com/plugins/serverless-plugin-warmup
+  warmup:
+    default:
+      enabled: ${env:WARM_LAMBDA, false}
+      prewarm: true
+      events:
+        - schedule: rate(5 minutes)
+
+  esbuild:
+    minify: false
+
+functions:
+  - ${file(src/user/functions/functions.yml)}
+  
+
+resources:
+  - ${file(src/user/resources.yml)}

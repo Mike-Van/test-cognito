@@ -1,0 +1,15 @@
+# Serverless related
+.serverless/
+
+# Nextjs related
+.serverless_nextjs/
+.next/
+
+# Node artifact files
+node_modules/
+dist/
+
+# Maven
+target/
+
+sw.js

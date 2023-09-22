@@ -1,0 +1,52 @@
+{
+  "name": "web",
+  "version": "0.1.1",
+  "private": true,
+  "scripts": {
+    "read:env": "env-cmd --silent -f $( find-up config.env || echo 'x' )",
+    "start": "yarn read:env next start",
+    "dev": "yarn read:env next dev",
+    "build": "yarn read:env next build",
+    "//": "SKIP_UPLOAD_SENTRY to not deploy sentry source map too often on dev",
+    "deploy": "SKIP_UPLOAD_SENTRY=true yarn read:env sst deploy",
+    "destroy": "yarn read:env sst remove",
+    "console": "yarn read:env sst console",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.11.16",
+    "@mui/lab": "^5.0.0-alpha.133",
+    "@mui/material": "^5.13.4",
+    "@mui/styles": "^5.13.2",
+    "@mui/system": "^5.13.2",
+    "@mui/x-data-grid-pro": "^5.5.1",
+    "@mui/x-date-pickers": "^6.10.0",
+
+
+    "aws-amplify": "^4.3.26",
+
+    "next": "13.4.12",
+    "next-pwa": "^5.6.0",
+
+    "react": "^18.2.0",
+    "react-router-dom": "^5.3.0",
+    "react-dom": "^18.2.0",
+    "sharp": "^0.32.4"
+  },
+  "devDependencies": {
+    "@sentry/webpack-plugin": "1.19.0",
+    
+    "aws-cdk-lib": "2.87.0",
+    
+    "constructs": "10.2.69",
+    "dotenv": "^16.3.1",
+    "edit-dotenv": "^1.0.4",
+    "env-cmd": "^10.1.0",
+    "find-up-cli": "^5.0.0",
+    "npm-run-all": "^4.1.5",
+    
+    "sst": "2.22.6"
+  }
+}

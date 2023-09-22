@@ -1,0 +1,16 @@
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+**/.turbo
+**/.next
+**/public
+**/dist
+**/.sst
+**/.open-next
+**/out
+**/__dist
+**/.firebase
+**/.eslintcache
+**/types/gql/*
+**/__*

@@ -1,0 +1,36 @@
+{
+  "name": "mapstack",
+  "short_name": "mapstack",
+  "icons": [
+    {
+      "src": "/icons/mapstack.svg",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/mapstack_maskable.svg",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/splash-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#42236B",
+  "background_color": "#23123A",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}

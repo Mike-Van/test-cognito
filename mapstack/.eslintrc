@@ -1,0 +1,13 @@
+{
+  "root": true,
+  "parser": "@babel/eslint-parser",
+  "extends": ["custom"],
+  "settings": {
+    "next": {
+      "rootDir": ["apps/web/"]
+    },
+    "react": {
+      "version": "18"
+    }
+  }
+}

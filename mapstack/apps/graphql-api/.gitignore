@@ -1,0 +1,17 @@
+# package directories
+node_modules
+jspm_packages
+
+# Serverless directories
+.serverless
+.env
+# Ignore serverless manifest files
+serverless.manifest.json
+.serverless/manifest.json
+.DS_Store
+
+# This file is gererated during pre-deploy 
+# It is created from resources-template.yml
+# And it inserts the correct domain name for oauth
+# e.g. auth-staging.mapstack.Ignore
+src/user/resources.yml

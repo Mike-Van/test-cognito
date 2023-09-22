@@ -1,0 +1,55 @@
+{
+  "name": "graphql-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "read:env": "env-cmd --silent -f $( find-up config.env || echo 'x' )",
+    "exportEnv": "yarn read:env sls export-env",
+    "deploy": "npm-run-all deploy:run deploy:post",
+    "deploy:run": "yarn read:env sls deploy",
+    "deploy:post": "node postDeploy.js",
+
+    "destroy": "yarn read:env sls remove",
+    "test": "yarn read:env jest --config=jest.config.ts --runInBand"
+  },
+  "devDependencies": {
+    
+    "@aws-sdk/client-cognito-identity-provider": "^3.370.0",
+    "@aws-sdk/client-s3": "^3.377.0",
+    "@aws-sdk/client-secrets-manager": "^3.186.0",
+    "@aws-sdk/client-ses": "^3.171.0",
+    "@aws-sdk/client-sfn": "^3.319.0",
+    "@aws-sdk/client-ssm": "^3.319.0",
+    
+    "async-retry": "^1.3.3",
+    "aws-amplify": "^4.3.25",
+    "dotenv": "^8.2.0",
+    "edit-dotenv": "^1.0.4",
+    "env-cmd": "^10.1.0",
+    "esbuild": "^0.18.17",
+    "eslint": "8.44.0",
+    "find-up-cli": "^5.0.0",
+    
+    "npm-run-all": "^4.1.5",
+    
+    "serverless": "3.30.1",
+    
+    "serverless-esbuild": "^1.46.0",
+    "serverless-export-env": "^2.2.0",
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-plugin-ifelse": "^1.0.7",
+    "serverless-plugin-monorepo": "^0.11.0",
+    "serverless-prune-plugin": "^2.0.1",
+    "serverless-stack-output": "^0.2.3"
+  },
+  "dependencies": {
+    
+    
+    
+    
+    
+  }
+}

@@ -1,0 +1,11 @@
+# amplify
+build/
+dist/
+node_modules/
+aws-exports.js
+.env.local
+.env
+
+# We generate a new serverless.yml in preDeploy.js
+sw.js
+sw.js.map

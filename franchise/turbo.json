@@ -1,0 +1,76 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"globalDependencies": ["**/.env.*local"],
+	"pipeline": {
+		"dev": {
+			"cache": false,
+			"persistent": true
+		},
+		"codegen": {
+			"cache": false
+		},
+		"lint": {
+			"dependsOn": ["^lint"],
+			"outputs": []
+		},
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": ["dist/**"]
+		},
+		"web#build": {
+			"dependsOn": ["^build"],
+			"outputs": [".next/**", "!.next/cache/**"]
+		},
+		"@franchise/territory-builder#build": {
+			"dependsOn": [
+				"@franchise/ui-components#build",
+				"@franchise/map-style#build",
+				"@franchise/header#build",
+				"@franchise/user-auth#build"
+			]
+		},
+		"@franchise/territory-viewer#build": {
+			"dependsOn": [
+				"@franchise/ui-components#build",
+				"@franchise/map-style#build",
+				"@franchise/header#build",
+				"@franchise/user-auth#build"
+			]
+		},
+		"@franchise/header#build": {
+			"dependsOn": ["@franchise/ui-components#build", "@franchise/user-auth#build"]
+		},
+		"@franchise/workspace-creator#build": {
+			"dependsOn": ["@franchise/ui-components#build", "@franchise/user-auth#build"]
+		},
+		"@franchise/workspace#build": {
+			"dependsOn": ["@franchise/ui-components#build", "@franchise/user-auth#build", "@franchise/header#build"]
+		},
+		"@franchise/user-profile#build": {
+			"dependsOn": ["@franchise/ui-components#build", "@franchise/user-auth#build", "@franchise/header#build"]
+		},
+		"@franchise/workspace-member-creator#build": {
+			"dependsOn": ["@franchise/ui-components#build", "@franchise/user-auth#build"]
+		},
+		"@franchise/user-auth#build": {
+			"dependsOn": ["@franchise/ui-components#build"]
+		},
+		"@franchise/map-style#build": {
+			"dependsOn": ["@franchise/configs#build"]
+		},
+		"@franchise/ui-components#build": {
+			"dependsOn": ["@franchise/configs#build"]
+		},
+		"test": {
+			"dependsOn": ["lint", "build", "deploy"],
+			"outputs": []
+		},
+		"deploy": {
+			"dependsOn": [],
+			"outputs": []
+		},
+		"web#deploy": {
+			"dependsOn": ["^build", "graphql-api#deploy", "@franchise/lambda#deploy"]
+		}
+	}
+}
