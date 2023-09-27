@@ -24,8 +24,8 @@ const sst: SSTConfig = {
   config() {
     return {
       name: 'Web',
-      region: REGION || 'us-east-1',
-      stage: NEXT_ENV || 'dev'
+      region: REGION,
+      stage: NEXT_ENV
     }
   },
   stacks(app) {

@@ -1,0 +1,37 @@
+{
+	"name": "graphql-api",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "cp ../../config.env .env && sst dev",
+		"lint": "eslint . --fix",
+		"build": "tsc -p tsconfig.build.json && cp ../../config.env .env && sst build",
+		"deploy:sst": "sst deploy --stage $STAGE && yarn deploy:post",
+		"deploy:post": "ts-node post-deploy.ts",
+		"deploy": "env-cmd -f $(find-up config.env) yarn deploy:sst",
+		"destroy": "sst remove",
+		"console": "sst console"
+	},
+	"devDependencies": {
+		"@aws-amplify/api": "^5.4.4",
+		"@aws-sdk/client-cognito-identity-provider": "^3.319.0",
+		"@aws-sdk/s3-request-presigner": "^3.391.0",
+		"@aws-sdk/types": "^3.398.0",
+		"@types/aws-lambda": "^8.10.119",
+		"@types/node": "17.0.31",
+		"aws-cdk-lib": "2.96.2",
+		"aws-sdk": "^2.1446.0",
+		"constructs": "10.1.156",
+		"edit-dotenv": "^1.0.4",
+		"env-cmd": "^10.1.0",
+		"find-up": "^6.3.0",
+		"find-up-cli": "^5.0.0",
+		"sst": "2.25.6",
+		"ts-node": "^10.9.1",
+		"typescript": "^4.9.4"
+	},
+	"dependencies": {
+		"@aws-sdk/client-s3": "3.367.0",
+		"aws-lambda": "^1.0.7"
+	}
+}

@@ -1,0 +1,282 @@
+Resources:
+  CustomResourceHandlerServiceRole41AEC181:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - !Join 
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Tags:
+        - Key: 'sst:app'
+          Value: test-franchise-graphql-api
+        - Key: 'sst:stage'
+          Value: dev
+  CustomResourceHandlerE8FB56BA:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: cdk-hnb659fds-assets-632020703379-us-west-1
+        S3Key: 579964796846a6e68b15fa6fd5ce1ad69a7a6a967fb7a92fd5afffbfb30c0148.zip
+      Handler: index.handler
+      MemorySize: 1024
+      Role: !GetAtt 
+        - CustomResourceHandlerServiceRole41AEC181
+        - Arn
+      Runtime: nodejs16.x
+      Tags:
+        - Key: 'sst:app'
+          Value: test-franchise-graphql-api
+        - Key: 'sst:stage'
+          Value: dev
+      Timeout: 900
+    DependsOn:
+      - CustomResourceHandlerServiceRole41AEC181
+  PostConfirmationServiceRoleD7F58EB2:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: 2012-10-17
+      ManagedPolicyArns:
+        - !Join 
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Tags:
+        - Key: 'sst:app'
+          Value: test-franchise-graphql-api
+        - Key: 'sst:stage'
+          Value: dev
+  PostConfirmationServiceRoleDefaultPolicy2FD74492:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 'xray:PutTraceSegments'
+              - 'xray:PutTelemetryRecords'
+            Effect: Allow
+            Resource: '*'
+          - Action: 'cognito-idp:AdminUpdateUserAttributes'
+            Effect: Allow
+            Resource: '*'
+          - Action: 'cognito-idp:AdminDeleteUser'
+            Effect: Allow
+            Resource: '*'
+        Version: 2012-10-17
+      PolicyName: PostConfirmationServiceRoleDefaultPolicy2FD74492
+      Roles:
+        - !Ref PostConfirmationServiceRoleD7F58EB2
+  PostConfirmation3781BF5D:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Architectures:
+        - x86_64
+      Code:
+        S3Bucket: cdk-hnb659fds-assets-632020703379-us-west-1
+        S3Key: a9c2dd886cc929c8a690e189504a8d088a551dd457aa1632e9cfc3c8f713e837.zip
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          SST_APP: test-franchise-graphql-api
+          SST_STAGE: dev
+          SST_SSM_PREFIX: /sst/test-franchise-graphql-api/dev/
+      EphemeralStorage:
+        Size: 512
+      Handler: src/functions/postConfirmation/main.handler
+      MemorySize: 1024
+      Role: !GetAtt 
+        - PostConfirmationServiceRoleD7F58EB2
+        - Arn
+      Runtime: nodejs16.x
+      Tags:
+        - Key: 'sst:app'
+          Value: test-franchise-graphql-api
+        - Key: 'sst:stage'
+          Value: dev
+      Timeout: 10
+      TracingConfig:
+        Mode: Active
+    DependsOn:
+      - PostConfirmationServiceRoleDefaultPolicy2FD74492
+      - PostConfirmationServiceRoleD7F58EB2
+  PostConfirmationParameterfunctionName10E689F9:
+    Type: 'AWS::SSM::Parameter'
+    Properties:
+      Name: >-
+        /sst/test-franchise-graphql-api/dev/Function/PostConfirmation/functionName
+      Tags:
+        'sst:app': test-franchise-graphql-api
+        'sst:stage': dev
+      Type: String
+      Value: !Ref PostConfirmation3781BF5D
+  UserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      AutoVerifiedAttributes:
+        - email
+      LambdaConfig:
+        PostConfirmation: !GetAtt 
+          - PostConfirmation3781BF5D
+          - Arn
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+      Schema:
+        - AttributeDataType: String
+          Mutable: true
+          Name: name
+          Required: false
+        - AttributeDataType: String
+          Mutable: true
+          Name: id
+          Required: false
+      UserPoolTags:
+        'sst:app': test-franchise-graphql-api
+        'sst:stage': dev
+      UsernameAttributes:
+        - email
+  AuthDomain:
+    Type: 'AWS::Cognito::UserPoolDomain'
+    Properties:
+      Domain: cb93f9f1-7bab-4f81-8261-7da0f2125b80
+      UserPoolId: !Ref UserPool
+  Google:
+    Type: 'AWS::Cognito::UserPoolIdentityProvider'
+    Properties:
+      AttributeMapping:
+        email: email
+        given_name: given_name
+        family_name: family_name
+        picture: picture
+      ProviderDetails:
+        client_id: >-
+          474390516969-otmmtr99blhisbojl1lkjfqrl3oj67ho.apps.googleusercontent.com
+        client_secret: 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
+        authorize_scopes: profile email openid
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+  UserPoolClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    Properties:
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - 'http://localhost:3000?postSignIn=true'
+        - 'http://localhost:3001?postSignIn=true'
+      ClientName: Web
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      LogoutURLs:
+        - 'http://localhost:3000?postSignOut=true'
+        - 'http://localhost:3001?postSignOut=true'
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - Google
+      UserPoolId: !Ref UserPool
+  FunctionSourcemapUploaderPolicy4149E801:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - 's3:GetObject'
+              - 's3:PutObject'
+            Effect: Allow
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::cdk-hnb659fds-assets-632020703379-us-west-1/*'
+              - !Join 
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::sstbootstrap-uswest107eb6d20-rkibm7y242yu/*'
+        Version: 2012-10-17
+      PolicyName: FunctionSourcemapUploaderPolicy4149E801
+      Roles:
+        - !Ref CustomResourceHandlerServiceRole41AEC181
+  FunctionSourcemapUploader:
+    Type: 'Custom::FunctionSourcemapUploader'
+    Properties:
+      ServiceToken: !GetAtt 
+        - CustomResourceHandlerE8FB56BA
+        - Arn
+      app: test-franchise-graphql-api
+      stage: dev
+      bootstrap: sstbootstrap-uswest107eb6d20-rkibm7y242yu
+      bucket: cdk-hnb659fds-assets-632020703379-us-west-1
+      functions:
+        - - !GetAtt 
+            - PostConfirmation3781BF5D
+            - Arn
+          - 754780388ac50b8555d14890ae164b681626c44b435c68e184816fec1519e051.map
+    DependsOn:
+      - FunctionSourcemapUploaderPolicy4149E801
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+Outputs:
+  AuthUserPoolId:
+    Value: !Ref UserPool
+  AuthUserPoolClientId:
+    Value: !Ref UserPoolClient
+  SSTMetadata:
+    Value: !Join 
+      - ''
+      - - >-
+          {"app":"test-franchise-graphql-api","stage":"dev","version":"2.25.6","metadata":[{"id":"PostConfirmation","addr":"c8f7c91aa9cfe29e73d7b644e12b161ff8fdb34540","stack":"dev-test-franchise-graphql-api-CognitoStack","type":"Function","data":{"arn":"
+        - !GetAtt 
+          - PostConfirmation3781BF5D
+          - Arn
+        - >-
+          ","runtime":"nodejs16.x","handler":"src/functions/postConfirmation/main.handler","localId":"c8f7c91aa9cfe29e73d7b644e12b161ff8fdb34540","secrets":[]}}]}
+Parameters:
+  BootstrapVersion:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: >-
+      Version of the CDK Bootstrap resources in this environment, automatically
+      retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert: !Not 
+          - 'Fn::Contains':
+              - - '1'
+                - '2'
+                - '3'
+                - '4'
+                - '5'
+              - !Ref BootstrapVersion
+        AssertDescription: >-
+          CDK bootstrap stack version 6 required. Please run 'cdk bootstrap'
+          with a recent version of the CDK CLI.

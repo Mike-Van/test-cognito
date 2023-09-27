@@ -1,0 +1,53 @@
+{
+	"name": "franchise",
+	"version": "1.0.0",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"engines": {
+		"npm": ">=8.19.3",
+		"node": ">=16.19.1"
+	},
+	"packageManager": "yarn@1.22.17",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mangomap/franchise.git"
+	},
+	"scripts": {
+		"postinstall": "yarn setup",
+		"setup": "[ -d .git ] &&  husky install || echo \"Not a git directory. Skip husky installation.\"",
+		"build": "turbo run build",
+		"dev": "turbo run dev",
+		"lint": "eslint . --fix --cache",
+		"prettify": "prettier --write \"**/*.{js,jsx,ts,tsx,md,json}\" --loglevel error --cache --cache-strategy metadata",
+		"test": "turbo run test",
+		"deploy": "turbo run deploy",
+		"codegen": "turbo run codegen"
+	},
+	"devDependencies": {
+		"@turbo/gen": "^1.9.7",
+		"@typescript-eslint/eslint-plugin": "^5.59.7",
+		"@typescript-eslint/parser": "^5.59.7",
+		"edit-dotenv": "^1.0.4",
+		"eslint-config-prettier": "^8.8.0",
+		"eslint-plugin-import": "^2.27.5",
+		"eslint-plugin-jest": "^27.2.1",
+		"eslint-plugin-react": "^7.32.2",
+		"eslint-plugin-react-hooks": "^4.6.0",
+		"eslint-plugin-storybook": "^0.6.12",
+		"husky": "^8.0.3",
+		"prettier": "2.8.8",
+		"turbo": "latest"
+	},
+	"dependencies": {
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/git": "10.0.1",
+		"@semantic-release/github": "8.0.6",
+		"semantic-release": "19.0.5"
+	},
+	"resolutions": {
+		"**/graphql": "^16.8.0"
+	}
+}

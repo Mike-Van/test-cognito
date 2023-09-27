@@ -1,0 +1,192 @@
+Resources:
+  UserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: false
+      Schema:
+        - AttributeDataType: String
+          Mutable: true
+          Name: name
+          Required: false
+        - AttributeDataType: String
+          Mutable: true
+          Name: id
+          Required: false
+      UsernameAttributes:
+        - email
+    Metadata:
+      'aws:cdk:path': GraphqlApiStack/UserPool
+  AuthDomain:
+    Type: 'AWS::Cognito::UserPoolDomain'
+    Properties:
+      Domain: bc602b60-bc6b-4ede-adcd-d16e15faec0f
+      UserPoolId: !Ref UserPool
+    Metadata:
+      'aws:cdk:path': GraphqlApiStack/AuthDomain
+  Google:
+    Type: 'AWS::Cognito::UserPoolIdentityProvider'
+    Properties:
+      AttributeMapping:
+        email: email
+        given_name: given_name
+        family_name: family_name
+        picture: picture
+      ProviderDetails:
+        client_id: >-
+          474390516969-otmmtr99blhisbojl1lkjfqrl3oj67ho.apps.googleusercontent.com
+        client_secret: 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
+        authorize_scopes: profile email openid
+      ProviderName: Google
+      ProviderType: Google
+      UserPoolId: !Ref UserPool
+    Metadata:
+      'aws:cdk:path': GraphqlApiStack/Google
+  UserPoolClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    Properties:
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - 'http://localhost:3000?postSignIn=true'
+        - 'http://localhost:3001?postSignIn=true'
+      ClientName: Web
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      LogoutURLs:
+        - 'http://localhost:3000?postSignOut=true'
+        - 'http://localhost:3001?postSignOut=true'
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - Google
+      UserPoolId: !Ref UserPool
+    DependsOn:
+      - Google
+    Metadata:
+      'aws:cdk:path': GraphqlApiStack/UserPoolClient
+  CDKMetadata:
+    Type: 'AWS::CDK::Metadata'
+    Properties:
+      Analytics: >-
+        v2:deflate64:H4sIAAAAAAAA/02OuwrCQBBFv8V+MxILH3VsrAwRa4m7o0weM2F3NiIh/+4Gm1T3cC5c7g5OB8g39Sdk1rVZR0+Yblrb1iT1sPJmUoGpePE9oC9FOrPis/Q18dpcHLKSfksvIzn0667oKJXzoq5Rh6gLVRgkeosLF8KOlIRnw+IQmrAd8yPk+/SwCUSZj2m8R6j++QNbSvfNvQAAAA==
+    Metadata:
+      'aws:cdk:path': GraphqlApiStack/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Outputs:
+  AuthUserPoolId:
+    Description: The name of the s3 bucket
+    Value: !Ref UserPool
+    Export:
+      Name: AuthUserPoolId
+  AuthUserPoolClientId:
+    Description: The name of the s3 bucket
+    Value: !Ref UserPoolClient
+    Export:
+      Name: AuthUserPoolClientId
+Conditions:
+  CDKMetadataAvailable: !Or 
+    - !Or 
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - af-south-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-east-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-northeast-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-northeast-2
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-south-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-southeast-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ap-southeast-2
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - ca-central-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - cn-north-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - cn-northwest-1
+    - !Or 
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-central-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-north-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-south-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-west-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-west-2
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - eu-west-3
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - me-south-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - sa-east-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - us-east-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - us-east-2
+    - !Or 
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - us-west-1
+      - !Equals 
+        - !Ref 'AWS::Region'
+        - us-west-2
+Parameters:
+  BootstrapVersion:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: >-
+      Version of the CDK Bootstrap resources in this environment, automatically
+      retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert: !Not 
+          - 'Fn::Contains':
+              - - '1'
+                - '2'
+                - '3'
+                - '4'
+                - '5'
+              - !Ref BootstrapVersion
+        AssertDescription: >-
+          CDK bootstrap stack version 6 required. Please run 'cdk bootstrap'
+          with a recent version of the CDK CLI.

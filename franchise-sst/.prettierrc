@@ -1,0 +1,15 @@
+{
+	"allow_inline_formatting": true,
+	"arrowParens": "always",
+	"bracketSameLine": false,
+	"embeddedLanguageFormatting": "auto",
+	"printWidth": 110,
+	"semi": true,
+	"singleQuote": true,
+	"tabWidth": 2,
+	"trailingComma": "es5",
+	"useTabs": true,
+	"vueIndentScriptAndStyle": true,
+	"endOfLine": "auto",
+	"proseWrap": "preserve"
+}

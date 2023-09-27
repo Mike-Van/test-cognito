@@ -1,0 +1,268 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: The AWS CloudFormation template for this Serverless application
+Resources:
+  ServerlessDeploymentBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+  ServerlessDeploymentBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref ServerlessDeploymentBucket
+      PolicyDocument:
+        Statement:
+          - Action: 's3:*'
+            Effect: Deny
+            Principal: '*'
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+                  - /*
+              - !Join 
+                - ''
+                - - 'arn:'
+                  - !Ref 'AWS::Partition'
+                  - ':s3:::'
+                  - !Ref ServerlessDeploymentBucket
+            Condition:
+              Bool:
+                'aws:SecureTransport': false
+  ConfirmUserSignupLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: /aws/lambda/test-mapstack-graphql-api-dev-confirmUserSignup
+  IamRoleLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join 
+            - '-'
+            - - test-mapstack-graphql-api
+              - dev
+              - lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:TagResource'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/test-mapstack-graphql-api-dev*:*
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/test-mapstack-graphql-api-dev*:*:*
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                Resource:
+                  - '*'
+      Path: /
+      RoleName: !Join 
+        - '-'
+        - - test-mapstack-graphql-api
+          - dev
+          - !Ref 'AWS::Region'
+          - lambdaRole
+  ConfirmUserSignupLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref ServerlessDeploymentBucket
+        S3Key: >-
+          serverless/test-mapstack-graphql-api/dev/1695711839266-2023-09-26T07:03:59.266Z/confirmUserSignup.zip
+      Handler: src/user/functions/confirm-user-signup/index.handler
+      Runtime: nodejs18.x
+      FunctionName: test-mapstack-graphql-api-dev-confirmUserSignup
+      MemorySize: 1024
+      Timeout: 60
+      TracingConfig:
+        Mode: Active
+      Environment:
+        Variables:
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          SENTRY_DSN: >-
+            https://bc7eb9f130dd43878b439d3c88a9fe5b@o1398700.ingest.sentry.io/6725645
+      Role: !GetAtt 
+        - ConfirmUserSignupIamRoleLambdaExecution
+        - Arn
+    DependsOn:
+      - ConfirmUserSignupIamRoleLambdaExecution
+      - ConfirmUserSignupLogGroup
+  ConfirmUserSignupLambdaVersion2ZnKLnvYy9UxXrZVGCaQeMWmNaAWotSwTqJXm5CXHQ:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref ConfirmUserSignupLambdaFunction
+      CodeSha256: kxJv7CV5ZqWIcMcEr7OCN0zEaBWT/h2Tkea0iVI8+bk=
+  ConfirmUserSignupIamRoleLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Join 
+            - '-'
+            - - test-mapstack-graphql-api
+              - dev
+              - lambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/test-mapstack-graphql-api-dev-confirmUserSignup:*:*
+              - Effect: Allow
+                Action:
+                  - 'cognito-idp:AdminUpdateUserAttributes'
+                  - 'cognito-idp:AdminDeleteUser'
+                Resource: '*'
+      Path: /
+      RoleName: !Join 
+        - '-'
+        - - test-mapstack-graphql-api
+          - dev
+          - confirmUserSignup
+          - !Ref 'AWS::Region'
+      ManagedPolicyArns: []
+  CognitoUserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireUppercase: false
+          RequireSymbols: false
+      UsernameAttributes:
+        - email
+      Schema:
+        - AttributeDataType: String
+          Name: name
+          Required: false
+          Mutable: true
+        - AttributeDataType: String
+          Name: id
+          Required: false
+          Mutable: true
+      LambdaConfig:
+        PostConfirmation: !GetAtt 
+          - ConfirmUserSignupLambdaFunction
+          - Arn
+  UserPoolDomain:
+    Type: 'AWS::Cognito::UserPoolDomain'
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Domain: 5ce5bd3e-41bb-45d0-8ef8-c9254447eab3
+  UserPoolInvokeConfirmUserSignupLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      FunctionName: !Ref ConfirmUserSignupLambdaFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt 
+        - CognitoUserPool
+        - Arn
+  UserPoolIdentityProvider:
+    Type: 'AWS::Cognito::UserPoolIdentityProvider'
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ProviderName: Google
+      ProviderDetails:
+        client_id: >-
+          474390516969-m2vm8legb0a3oi4qne48btnnp9mqrv8i.apps.googleusercontent.com
+        client_secret: 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
+        authorize_scopes: profile email openid
+      ProviderType: Google
+      AttributeMapping:
+        email: email
+        given_name: given_name
+        family_name: family_name
+        picture: picture
+  WebUserPoolClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    DependsOn:
+      - UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ClientName: Web
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      PreventUserExistenceErrors: ENABLED
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      CallbackURLs:
+        - !Sub 'http://localhost:3000?postSignIn=true'
+        - !Sub 'http://localhost:3001?postSignIn=true'
+      LogoutURLs:
+        - !Sub 'http://localhost:3000?postSignOut=true'
+        - !Sub 'http://localhost:3001?postSignOut=true'
+      SupportedIdentityProviders:
+        - Google
+Outputs:
+  ServerlessDeploymentBucketName:
+    Value: !Ref ServerlessDeploymentBucket
+    Export:
+      Name: sls-test-mapstack-graphql-api-dev-ServerlessDeploymentBucketName
+  ConfirmUserSignupLambdaFunctionQualifiedArn:
+    Description: Current Lambda function version
+    Value: !Ref ConfirmUserSignupLambdaVersion2ZnKLnvYy9UxXrZVGCaQeMWmNaAWotSwTqJXm5CXHQ
+    Export:
+      Name: >-
+        sls-test-mapstack-graphql-api-dev-ConfirmUserSignupLambdaFunctionQualifiedArn
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+  WebCognitoUserPoolClientId:
+    Value: !Ref WebUserPoolClient
+  Region:
+    Value: us-west-1

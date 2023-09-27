@@ -1,0 +1,9 @@
+runs:
+  using: "composite"
+  steps:
+    - name: Push S3 configuration
+      shell: bash
+      run: |
+        aws s3 cp config.env s3://$BUCKET_NAME/config.env
+        aws s3 sync node_modules/.cache/turbo s3://$BUCKET_NAME/node_modules/.cache/turbo --delete
+        aws s3 cp apps/web/cdk.context.json s3://$BUCKET_NAME/web/cdk.context.json  
